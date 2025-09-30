@@ -29,8 +29,7 @@ from rich.align import Align
 from rich.text import Text
 from typing_extensions import Final, TypeAlias
 
-from textual import on, work
-from textual import _async
+from textual import _async, on, work
 from textual.binding import Binding, BindingType
 from textual.containers import Horizontal, Vertical
 from textual.content import Content

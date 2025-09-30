@@ -12,8 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 import rich.repr
 
-from textual import _async
-from textual import events
+from textual import _async, events
 from textual._loop import loop_last
 from textual._parser import ParseError
 from textual._xterm_parser import XTermParser

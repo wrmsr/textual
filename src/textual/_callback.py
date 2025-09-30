@@ -4,8 +4,7 @@ from functools import partial
 from inspect import isawaitable, signature
 from typing import TYPE_CHECKING, Any, Callable
 
-from textual import _async
-from textual import active_app
+from textual import _async, active_app
 
 if TYPE_CHECKING:
     from textual.app import App

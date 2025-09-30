@@ -7,8 +7,7 @@ from typing import TYPE_CHECKING, Callable, ClassVar, Iterable, Iterator
 from rich.style import Style
 from rich.text import Text, TextType
 
-from textual import _async
-from textual import work
+from textual import _async, work
 from textual.await_complete import AwaitComplete
 from textual.message import Message
 from textual.reactive import var

@@ -21,8 +21,7 @@ from pathlib import Path
 from threading import Event, Thread
 from typing import Any, BinaryIO, Literal, TextIO, cast
 
-from textual import _async
-from textual import events, log, messages
+from textual import _async, events, log, messages
 from textual._binary_encode import dump as binary_dump
 from textual._xterm_parser import XTermParser
 from textual.app import App

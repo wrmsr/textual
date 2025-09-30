@@ -8,8 +8,7 @@ from ctypes import Structure, Union, byref, wintypes
 from ctypes.wintypes import BOOL, CHAR, DWORD, HANDLE, SHORT, UINT, WCHAR, WORD
 from typing import IO, TYPE_CHECKING, Callable, List, Optional
 
-from textual import _async
-from textual import constants
+from textual import _async, constants
 from textual._xterm_parser import XTermParser
 from textual.events import Event, Resize
 from textual.geometry import Size

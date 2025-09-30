@@ -46,8 +46,7 @@ from textual.css.styles import StylesBase
 if TYPE_CHECKING:
     from textual.app import RenderResult
 
-from textual import constants, errors, events, messages
-from textual import _async
+from textual import _async, constants, errors, events, messages
 from textual._animator import DEFAULT_EASING, Animatable, BoundAnimator, EasingFunction
 from textual._arrange import DockArrangeResult, arrange
 from textual._context import NoActiveAppError

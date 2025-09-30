@@ -59,6 +59,7 @@ from rich.segment import Segment, Segments
 from rich.terminal_theme import TerminalTheme
 
 from textual import (
+    _async,
     Logger,
     LogGroup,
     LogVerbosity,
@@ -69,7 +70,6 @@ from textual import (
     messages,
     on,
 )
-from textual import _async
 from textual._animator import DEFAULT_EASING, Animatable, Animator, EasingFunction
 from textual._ansi_sequences import SYNC_END, SYNC_START
 from textual._ansi_theme import ALABASTER, MONOKAI

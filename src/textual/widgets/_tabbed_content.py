@@ -7,8 +7,7 @@ from typing import Awaitable
 from rich.repr import Result
 from typing_extensions import Final
 
-from textual import _async
-from textual import events
+from textual import _async, events
 from textual.app import ComposeResult
 from textual.await_complete import AwaitComplete
 from textual.content import ContentText, ContentType

@@ -29,8 +29,7 @@ import rich.repr
 from rich.console import RenderableType
 from rich.style import Style
 
-from textual import constants, errors, events, messages
-from textual import _async
+from textual import _async, constants, errors, events, messages
 from textual._arrange import arrange
 from textual._callback import invoke
 from textual._compositor import Compositor, MapGeometry

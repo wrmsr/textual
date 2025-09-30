@@ -7,8 +7,7 @@ from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 from typing_extensions import Protocol, runtime_checkable
 
-from textual import _async
-from textual import _time
+from textual import _async, _time
 from textual._callback import invoke
 from textual._compat import cached_property
 from textual._easing import DEFAULT_EASING, EASING

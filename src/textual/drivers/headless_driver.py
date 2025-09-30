@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from textual import _async
-from textual import events
+from textual import _async, events
 from textual.driver import Driver
 from textual.geometry import Size
 

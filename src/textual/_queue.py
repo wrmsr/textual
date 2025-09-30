@@ -5,8 +5,6 @@ from typing import Generic, TypeVar
 
 from textual import _async
 
-from textual import _async
-
 QueueType = TypeVar("QueueType")
 
 

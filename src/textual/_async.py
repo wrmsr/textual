@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import abc
 import asyncio
 import sys
 import typing as ta
@@ -36,13 +37,6 @@ def _dump_tasks():
 ##
 
 
-def sleep(delay):
-    return asyncio.sleep(delay)
-
-
-##
-
-
 class Future(ta.Protocol[T]):
     def cancel(self) -> bool: ...
     def add_done_callback(self, fn) -> None: ...
@@ -53,11 +47,6 @@ class Future(ta.Protocol[T]):
     def result(self) -> T: ...
     def exception(self) -> BaseException | None: ...
     def __await__(self) -> ta.Generator[ta.Any, None, T]: ...
-
-
-
-def new_future() -> Future:
-    return asyncio.Future()
 
 
 ##
@@ -98,6 +87,101 @@ class Task(Future[T]):
         return self._underlying.__await__()
 
 
+class TimerHandle:
+    def __init__(self, *, _underlying: asyncio.TimerHandle) -> None:
+        super().__init__()
+        self._underlying = _underlying
+
+    def cancel(self) -> None:
+        return self._underlying.cancel()
+
+
+class Loop:
+    def __init__(self, *, _underlying: asyncio.AbstractEventLoop) -> None:
+        super().__init__()
+        self._underlying = _underlying
+
+    def add_signal_handler(self, sig, callback, *args):
+        return self._underlying.add_signal_handler(sig, callback, *args)
+
+    def call_soon_threadsafe(self, callback, *args, context=None):
+        return self._underlying.call_soon_threadsafe(callback, *args, context=context)
+
+    def create_future(self) -> Future:
+        return self._underlying.create_future()
+
+    def run_in_executor(self, executor, func, *args):
+        return self._underlying.run_in_executor(executor, func, *args)
+
+    def run_until_complete(self, future):
+        return self._underlying.run_until_complete(future)
+
+
+class Event:
+    def __init__(self, *, _underlying: asyncio.Event) -> None:
+        super().__init__()
+        self._underlying = _underlying
+
+    def is_set(self):
+        return self._underlying.is_set()
+
+    def set(self):
+        return self._underlying.set()
+
+    def clear(self):
+        return self._underlying.clear()
+
+    async def wait(self):
+        return await self._underlying.wait()
+
+
+class Lock:
+    def __init__(self, *, _underlying: asyncio.Lock) -> None:
+        super().__init__()
+        self._underlying = _underlying
+
+    def locked(self):
+        return self._underlying.locked()
+
+    async def acquire(self):
+        return await self._underlying.acquire()
+
+    def release(self):
+        return self._underlying.release()
+
+
+class Queue(ta.Generic[T]):
+    def __init__(self, *, _underlying: asyncio.Queue[T]) -> None:
+        super().__init__()
+        self._underlying = _underlying
+
+    async def get(self):
+        return await self._underlying.get()
+
+    def task_done(self):
+        return self._underlying.task_done()
+
+    def put_nowait(self, item):
+        return self._underlying.put_nowait(item)
+
+    async def join(self):
+        return await self._underlying.join()
+
+    def empty(self):
+        return self._underlying.empty()
+
+    async def put(self, item):
+        return await self._underlying.put(item)
+
+
+ALL_COMPLETED = asyncio.ALL_COMPLETED
+FIRST_COMPLETED = asyncio.FIRST_COMPLETED
+FIRST_EXCEPTION = asyncio.FIRST_EXCEPTION
+
+
+##
+
+
 _WRAPPED_TASK_ATTR = '__textual_task__'
 
 
@@ -132,18 +216,6 @@ def create_task(coro, name=None, context=None) -> Task:
     return _wrap_task(asyncio.create_task(coro, name=name, context=context))
 
 
-##
-
-
-class TimerHandle:
-    def __init__(self, *, _underlying: asyncio.TimerHandle) -> None:
-        super().__init__()
-        self._underlying = _underlying
-
-    def cancel(self) -> None:
-        return self._underlying.cancel()
-
-
 def call_later(
         delay: float,
         callback: ta.Callable
@@ -151,29 +223,14 @@ def call_later(
     return TimerHandle(_underlying=asyncio.get_running_loop().call_later(delay, callback))
 
 
-##
-
-
-async def run_in_executor(fn, *args):
-    return await asyncio.get_running_loop().run_in_executor(None, fn, *args)
-
-
-##
-
-
-def gather(*coros_or_futures, return_exceptions=False):
+def gather(*coros_or_futures, return_exceptions=False):  # -> Future[list[T]]
     return asyncio.gather(
         *coros_or_futures,
         return_exceptions=return_exceptions,
     )
 
 
-ALL_COMPLETED = asyncio.ALL_COMPLETED
-FIRST_COMPLETED = asyncio.FIRST_COMPLETED
-FIRST_EXCEPTION = asyncio.FIRST_EXCEPTION
-
-
-async def wait(fs, *, timeout=None, return_when=ALL_COMPLETED):
+async def wait(fs, *, timeout=None, return_when=ALL_COMPLETED):  # -> (done: [Future[T]], pending: [Future[T]])
     return await asyncio.wait(
         fs,
         timeout=timeout,
@@ -181,39 +238,19 @@ async def wait(fs, *, timeout=None, return_when=ALL_COMPLETED):
     )
 
 
-def wait_for(fut, timeout):
+def wait_for(fut, timeout):  # -> T
     return asyncio.wait_for(
         fut,
         timeout=timeout,
     )
 
 
-##
-
-
-class Loop:
-    def __init__(self, *, _underlying: asyncio.AbstractEventLoop) -> None:
-        super().__init__()
-        self._underlying = _underlying
-
-    def add_signal_handler(self, sig, callback, *args):
-        return self._underlying.add_signal_handler(sig, callback, *args)
-
-    def call_soon_threadsafe(self, callback, *args, context=None):
-        return self._underlying.call_soon_threadsafe(callback, *args, context=context)
-
-    def create_future(self) -> Future:
-        return self._underlying.create_future()
-
-    def run_in_executor(self, executor, func, *args):
-        return self._underlying.run_in_executor(executor, func, *args)
-
-    def run_until_complete(self, future):
-        return self._underlying.run_until_complete(future)
-
-
 def get_running_loop() -> Loop:
     return Loop(_underlying=asyncio.get_running_loop())
+
+
+async def run_in_executor(fn, *args):
+    return await asyncio.get_running_loop().run_in_executor(None, fn, *args)
 
 
 def run_coroutine_threadsafe(coro, loop: Loop):
@@ -223,16 +260,6 @@ def run_coroutine_threadsafe(coro, loop: Loop):
 def set_loop_eager_task_factory(loop: Loop):
     if hasattr(asyncio, "eager_task_factory"):
         loop._underlying.set_task_factory(asyncio.eager_task_factory)
-
-
-##
-
-
-def shield(arg):
-    return asyncio.shield(arg)
-
-
-##
 
 
 def run(main):
@@ -261,80 +288,27 @@ def run_main(fn):
     return run(fn())
 
 
-##
-
-
-class Event:
-    def __init__(self, *, _underlying: asyncio.Event) -> None:
-        super().__init__()
-        self._underlying = _underlying
-
-    def is_set(self):
-        return self._underlying.is_set()
-
-    def set(self):
-        return self._underlying.set()
-
-    def clear(self):
-        return self._underlying.clear()
-
-    async def wait(self):
-        return await self._underlying.wait()
+def shield(arg):
+    return asyncio.shield(arg)
 
 
 def new_event() -> Event:
     return Event(_underlying=asyncio.Event())
 
 
-##
-
-
-class Lock:
-    def __init__(self, *, _underlying: asyncio.Lock) -> None:
-        super().__init__()
-        self._underlying = _underlying
-
-    def locked(self):
-        return self._underlying.locked()
-
-    async def acquire(self):
-        return await self._underlying.acquire()
-
-    def release(self):
-        return self._underlying.release()
-
-
 def new_lock() -> Lock:
     return Lock(_underlying=asyncio.Lock())
 
 
-##
-
-
-class Queue(ta.Generic[T]):
-    def __init__(self, *, _underlying: asyncio.Queue[T]) -> None:
-        super().__init__()
-        self._underlying = _underlying
-
-    async def get(self):
-        return await self._underlying.get()
-
-    def task_done(self):
-        return self._underlying.task_done()
-
-    def put_nowait(self, item):
-        return self._underlying.put_nowait(item)
-
-    async def join(self):
-        return await self._underlying.join()
-
-    def empty(self):
-        return self._underlying.empty()
-
-    async def put(self, item):
-        return await self._underlying.put(item)
-
-
 def new_queue() -> Queue:
     return Queue(_underlying=asyncio.Queue())
+
+
+def sleep(delay: float) -> ta.Awaitable[None]:
+    return asyncio.sleep(delay)
+
+
+def new_future() -> Future:
+    return asyncio.Future()
+
 
