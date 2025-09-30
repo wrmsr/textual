@@ -502,7 +502,7 @@ class Pilot(Generic[ReturnType]):
             _, pending = await _async.get().wait(
                 wait_for,
                 timeout=timeout,
-                return_when=_async.FIRST_COMPLETED,
+                return_when=_async.WaitReturnWhen.FIRST_COMPLETED,
             )
 
             for task in pending:

@@ -952,7 +952,7 @@ class CommandPalette(SystemModalScreen[None]):
                 # ...briefly wait for something on the stack. If we get
                 # something yield it up to our caller.
                 aborted = yield await _async.get().wait_for(commands.get(), 0.1)
-            except _async.TimeoutError:
+            except TimeoutError:
                 # A timeout is fine. We're just going to go back round again
                 # and see if anything else has turned up.
                 pass

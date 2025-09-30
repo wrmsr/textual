@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import abc
 import asyncio
+import contextlib
+import enum
 import sys
 import typing as ta
 
@@ -10,9 +12,16 @@ T = ta.TypeVar('T')
 T_co = ta.TypeVar('T_co', covariant=True)
 
 
+# class CancelledError(BaseException):
+#     pass
+
+
+# FIXME
 CancelledError = asyncio.CancelledError
-QueueEmpty = asyncio.QueueEmpty
-TimeoutError = asyncio.TimeoutError  # noqa
+
+
+class QueueEmpty(Exception):
+    pass
 
 
 ##
@@ -173,9 +182,10 @@ class Queue(ta.Generic[T]):
         raise NotImplementedError
 
 
-ALL_COMPLETED = asyncio.ALL_COMPLETED
-FIRST_COMPLETED = asyncio.FIRST_COMPLETED
-FIRST_EXCEPTION = asyncio.FIRST_EXCEPTION
+class WaitReturnWhen(enum.Enum):
+    ALL_COMPLETED = enum.auto()
+    FIRST_COMPLETED = enum.auto()
+    FIRST_EXCEPTION = enum.auto()
 
 
 class Async(abc.ABC):
@@ -228,7 +238,13 @@ class Async(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def wait(self, fs, *, timeout=None, return_when=ALL_COMPLETED):  # -> (done: [Future[T]], pending: [Future[T]])
+    async def wait(
+            self,
+            fs,
+            *,
+            timeout=None,
+            return_when=WaitReturnWhen.ALL_COMPLETED,
+    ):  # -> (done: [Future[T]], pending: [Future[T]])
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -274,6 +290,20 @@ class Async(abc.ABC):
 
 
 class _AsyncioAsync(Async):
+    @classmethod
+    @contextlib.contextmanager
+    def _translate_exceptions(cls):
+        try:
+            yield
+        except asyncio.CancelledError as e:
+            raise CancelledError from e
+        except asyncio.QueueEmpty as e:
+            raise QueueEmpty from e
+        except asyncio.TimeoutError as e:
+            raise TimeoutError from e
+
+    #
+
     def new_future(self) -> Future:
         return asyncio.Future()
 
@@ -401,23 +431,36 @@ class _AsyncioAsync(Async):
     #
 
     def gather(self, *coros_or_futures, return_exceptions=False):  # -> Future[list[T]]
-        return asyncio.gather(
-            *coros_or_futures,
-            return_exceptions=return_exceptions,
-        )
+        with self._translate_exceptions():
+            return asyncio.gather(
+                *coros_or_futures,
+                return_exceptions=return_exceptions,
+            )
 
-    async def wait(self, fs, *, timeout=None, return_when=ALL_COMPLETED):  # -> (done: [Future[T]], pending: [Future[T]])
-        return await asyncio.wait(
+    async def wait(
+            self,
             fs,
-            timeout=timeout,
-            return_when=return_when,
-        )
+            *,
+            timeout=None,
+            return_when=WaitReturnWhen.ALL_COMPLETED,
+    ):  # -> (done: [Future[T]], pending: [Future[T]])
+        with self._translate_exceptions():
+            return await asyncio.wait(
+                fs,
+                timeout=timeout,
+                return_when={
+                    WaitReturnWhen.ALL_COMPLETED: asyncio.ALL_COMPLETED,
+                    WaitReturnWhen.FIRST_COMPLETED: asyncio.FIRST_COMPLETED,
+                    WaitReturnWhen.FIRST_EXCEPTION: asyncio.FIRST_EXCEPTION,
+                }[return_when],
+            )
 
     def wait_for(self, fut, timeout):  # -> T
-        return asyncio.wait_for(
-            fut,
-            timeout=timeout,
-        )
+        with self._translate_exceptions():
+            return asyncio.wait_for(
+                fut,
+                timeout=timeout,
+            )
 
     def run(self, main):
         return asyncio.run(main)
@@ -443,7 +486,8 @@ class _AsyncioAsync(Async):
         return self.run(fn())
 
     def shield(self, arg):
-        return asyncio.shield(arg)
+        with self._translate_exceptions():
+            return asyncio.shield(arg)
 
     def sleep(self, delay: float) -> ta.Awaitable[None]:
         return asyncio.sleep(delay)
@@ -497,22 +541,28 @@ class _AsyncioAsync(Async):
             self._underlying = _underlying
 
         async def get(self):
-            return await self._underlying.get()
+            with _AsyncioAsync._translate_exceptions():
+                return await self._underlying.get()
 
         def task_done(self):
-            return self._underlying.task_done()
+            with _AsyncioAsync._translate_exceptions():
+                return self._underlying.task_done()
 
         def put_nowait(self, item):
-            return self._underlying.put_nowait(item)
+            with _AsyncioAsync._translate_exceptions():
+                return self._underlying.put_nowait(item)
 
         async def join(self):
-            return await self._underlying.join()
+            with _AsyncioAsync._translate_exceptions():
+                return await self._underlying.join()
 
         def empty(self):
-            return self._underlying.empty()
+            with _AsyncioAsync._translate_exceptions():
+                return self._underlying.empty()
 
         async def put(self, item):
-            return await self._underlying.put(item)
+            with _AsyncioAsync._translate_exceptions():
+                return await self._underlying.put(item)
 
     def new_queue(self) -> Queue:
         return self._Queue(_underlying=asyncio.Queue())
