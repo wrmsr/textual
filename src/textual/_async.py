@@ -17,6 +17,23 @@ TimeoutError = asyncio.TimeoutError  # noqa
 ##
 
 
+import threading
+
+_last_loop = None
+
+
+def _bomb():
+    import time
+    time.sleep(5)
+    # breakpoint()
+
+
+threading.Thread(target=_bomb).start()
+
+
+##
+
+
 def sleep(delay):
     return asyncio.sleep(delay)
 
@@ -109,10 +126,10 @@ async def run_in_executor(fn, *args):
 
 
 def gather(*coros_or_futures, return_exceptions=False):
-    return asyncio.gather(
+    return Future(_underlying=asyncio.gather(
         *[obj._underlying if isinstance(obj, Future) else obj for obj in coros_or_futures],
         return_exceptions=return_exceptions,
-    )
+    ))
 
 
 ALL_COMPLETED = asyncio.ALL_COMPLETED
@@ -120,16 +137,45 @@ FIRST_COMPLETED = asyncio.FIRST_COMPLETED
 FIRST_EXCEPTION = asyncio.FIRST_EXCEPTION
 
 
-def wait(fs, *, timeout=None, return_when=ALL_COMPLETED):
-    return asyncio.wait(
-        [obj._underlying if isinstance(obj, Future) else obj for obj in fs],
+async def wait(fs, *, timeout=None, return_when=ALL_COMPLETED):
+    global _last_loop
+    _last_loop = asyncio.get_running_loop()
+    lst = []
+    dct = {}
+    for obj in fs:
+        if isinstance(obj, Future):
+            fut = obj._underlying
+            dct[id(fut)] = obj
+            lst.append(fut)
+        else:
+            lst.append(obj)
+
+    done, pending = await asyncio.wait(
+        lst,
         timeout=timeout,
         return_when=return_when,
     )
 
+    def fix_out(out):
+        ret = []
+        for x in out:
+            y = dct.get(id(x))
+            if y is not None:
+                ret.append(y)
+            elif isinstance(x, asyncio.Future):
+                ret.append(Future(_underlying=x))
+            else:
+                ret.append(x)
+        return ret
+
+    return fix_out(done), fix_out(pending)
+
 
 def wait_for(fut, timeout):
-    return asyncio.wait_for(fut._underlying if isinstance(fut, Future) else fut, timeout=timeout)
+    return asyncio.wait_for(
+        fut._underlying if isinstance(fut, Future) else fut,
+        timeout=timeout,
+    )
 
 
 ##
