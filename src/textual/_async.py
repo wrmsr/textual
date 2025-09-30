@@ -17,18 +17,20 @@ TimeoutError = asyncio.TimeoutError  # noqa
 ##
 
 
-import threading
-
-_last_loop = None
-
-
-def _bomb():
-    import time
-    time.sleep(5)
-    # breakpoint()
+def _dump_tasks():
+    print('\n'.join(sorted(map(repr, asyncio.all_tasks()))) + '\n', file=sys.stderr)
 
 
-threading.Thread(target=_bomb).start()
+# import threading
+#
+#
+# def _bomb():
+#     import time
+#     time.sleep(5)
+#     # breakpoint()
+#
+#
+# threading.Thread(target=_bomb).start()
 
 
 ##
@@ -41,19 +43,43 @@ def sleep(delay):
 ##
 
 
-class Future(ta.Generic[T]):
-    def __init__(self, *, _underlying: asyncio.Future[T]) -> None:
+class Future(ta.Protocol[T]):
+    def cancel(self) -> bool: ...
+    def add_done_callback(self, fn) -> None: ...
+    def set_result(self, result: T) -> None: ...
+    def cancelled(self) -> bool: ...
+    def done(self) -> bool: ...
+    def result(self) -> T: ...
+    def exception(self) -> BaseException | None: ...
+    def __await__(self) -> ta.Generator[ta.Any, None, T]: ...
+
+
+
+def new_future() -> Future:
+    return asyncio.Future()
+
+
+##
+
+
+class Task(Future[T]):
+    def __init__(self, *, _underlying: asyncio.Task[T]) -> None:
         super().__init__()
         self._underlying = _underlying
+
+    _underlying: asyncio.Task[T]
 
     def cancel(self) -> bool:
         return self._underlying.cancel()
 
     def add_done_callback(self, fn) -> None:
-        self._underlying.add_done_callback(fn)
+        return self._underlying.add_done_callback(fn)
+
+    def remove_done_callback(self, fn) -> int:
+        return self._underlying.remove_done_callback(fn)
 
     def set_result(self, result: T) -> None:
-        self._underlying.set_result(result)
+        return self._underlying.set_result(result)
 
     def cancelled(self) -> bool:
         return self._underlying.cancelled()
@@ -67,33 +93,42 @@ class Future(ta.Generic[T]):
     def exception(self) -> BaseException | None:
         return self._underlying.exception()
 
-    def __await__(self) -> ta.Generator[ta.Any, None, T]:
+    def __await__(self):
         return self._underlying.__await__()
 
 
-def new_future() -> Future:
-    return Future(_underlying=asyncio.Future())
+_WRAPPED_TASK_ATTR = '__textual_task__'
 
 
-##
+def _wrap_task(obj):
+    if not isinstance(obj, asyncio.Task):
+        return obj
+    try:
+        return getattr(obj, _WRAPPED_TASK_ATTR)
+    except AttributeError:
+        pass
+    tsk = Task(_underlying=obj)
+    setattr(obj, _WRAPPED_TASK_ATTR, tsk)
+    return tsk
 
 
-class Task(Future[T]):
-    def __init__(self, *, _underlying: asyncio.Task[T]) -> None:
-        super().__init__(_underlying=_underlying)
-
-    _underlying: asyncio.Task[T]
+def _unwrap_future(obj):
+    if isinstance(obj, Task):
+        return obj._underlying
+    if isinstance(obj, asyncio.Task):
+        raise TypeError(obj)
+    return obj
 
 
 def current_task() -> Task | None:
     ut = asyncio.current_task()
     if ut is None:
         return None
-    return Task(_underlying=ut)
+    return _wrap_task(ut)
 
 
 def create_task(coro, name=None, context=None) -> Task:
-    return Task(_underlying=asyncio.create_task(coro, name=name, context=context))
+    return _wrap_task(asyncio.create_task(coro, name=name, context=context))
 
 
 ##
@@ -126,10 +161,10 @@ async def run_in_executor(fn, *args):
 
 
 def gather(*coros_or_futures, return_exceptions=False):
-    return Future(_underlying=asyncio.gather(
-        *[obj._underlying if isinstance(obj, Future) else obj for obj in coros_or_futures],
+    return asyncio.gather(
+        *coros_or_futures,
         return_exceptions=return_exceptions,
-    ))
+    )
 
 
 ALL_COMPLETED = asyncio.ALL_COMPLETED
@@ -138,42 +173,16 @@ FIRST_EXCEPTION = asyncio.FIRST_EXCEPTION
 
 
 async def wait(fs, *, timeout=None, return_when=ALL_COMPLETED):
-    global _last_loop
-    _last_loop = asyncio.get_running_loop()
-    lst = []
-    dct = {}
-    for obj in fs:
-        if isinstance(obj, Future):
-            fut = obj._underlying
-            dct[id(fut)] = obj
-            lst.append(fut)
-        else:
-            lst.append(obj)
-
-    done, pending = await asyncio.wait(
-        lst,
+    return await asyncio.wait(
+        fs,
         timeout=timeout,
         return_when=return_when,
     )
 
-    def fix_out(out):
-        ret = []
-        for x in out:
-            y = dct.get(id(x))
-            if y is not None:
-                ret.append(y)
-            elif isinstance(x, asyncio.Future):
-                ret.append(Future(_underlying=x))
-            else:
-                ret.append(x)
-        return ret
-
-    return fix_out(done), fix_out(pending)
-
 
 def wait_for(fut, timeout):
     return asyncio.wait_for(
-        fut._underlying if isinstance(fut, Future) else fut,
+        fut,
         timeout=timeout,
     )
 
@@ -193,7 +202,7 @@ class Loop:
         return self._underlying.call_soon_threadsafe(callback, *args, context=context)
 
     def create_future(self) -> Future:
-        return Future(_underlying=self._underlying.create_future())
+        return self._underlying.create_future()
 
     def run_in_executor(self, executor, func, *args):
         return self._underlying.run_in_executor(executor, func, *args)

@@ -498,6 +498,7 @@ class Pilot(Generic[ReturnType]):
                 _async.create_task(count_zero_event.wait()),
                 _async.create_task(self.app._exception_event.wait()),
             ]
+
             _, pending = await _async.wait(
                 wait_for,
                 timeout=timeout,
