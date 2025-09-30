@@ -46,6 +46,7 @@ def sleep(delay):
 class Future(ta.Protocol[T]):
     def cancel(self) -> bool: ...
     def add_done_callback(self, fn) -> None: ...
+    def remove_done_callback(self, fn) -> int: ...
     def set_result(self, result: T) -> None: ...
     def cancelled(self) -> bool: ...
     def done(self) -> bool: ...
@@ -263,42 +264,77 @@ def run_main(fn):
 ##
 
 
-class Event(ta.Protocol):
-    def is_set(self): ...
-    def set(self): ...
-    def clear(self): ...
-    async def wait(self): ...
+class Event:
+    def __init__(self, *, _underlying: asyncio.Event) -> None:
+        super().__init__()
+        self._underlying = _underlying
+
+    def is_set(self):
+        return self._underlying.is_set()
+
+    def set(self):
+        return self._underlying.set()
+
+    def clear(self):
+        return self._underlying.clear()
+
+    async def wait(self):
+        return await self._underlying.wait()
 
 
 def new_event() -> Event:
-    return asyncio.Event()
+    return Event(_underlying=asyncio.Event())
 
 
 ##
 
 
-class Lock(ta.Protocol):
-    def locked(self): ...
-    async def acquire(self): ...
-    def release(self): ...
+class Lock:
+    def __init__(self, *, _underlying: asyncio.Lock) -> None:
+        super().__init__()
+        self._underlying = _underlying
+
+    def locked(self):
+        return self._underlying.locked()
+
+    async def acquire(self):
+        return await self._underlying.acquire()
+
+    def release(self):
+        return self._underlying.release()
 
 
 def new_lock() -> Lock:
-    return asyncio.Lock()
+    return Lock(_underlying=asyncio.Lock())
 
 
 ##
 
 
-class Queue(ta.Protocol[T_co]):
-    async def get(self): ...
-    def task_done(self): ...
-    def put_nowait(self, item): ...
-    async def join(self): ...
-    def empty(self): ...
-    async def put(self, item): ...
+class Queue(ta.Generic[T]):
+    def __init__(self, *, _underlying: asyncio.Queue[T]) -> None:
+        super().__init__()
+        self._underlying = _underlying
+
+    async def get(self):
+        return await self._underlying.get()
+
+    def task_done(self):
+        return self._underlying.task_done()
+
+    def put_nowait(self, item):
+        return self._underlying.put_nowait(item)
+
+    async def join(self):
+        return await self._underlying.join()
+
+    def empty(self):
+        return self._underlying.empty()
+
+    async def put(self, item):
+        return await self._underlying.put(item)
 
 
 def new_queue() -> Queue:
-    return asyncio.Queue()
+    return Queue(_underlying=asyncio.Queue())
 
