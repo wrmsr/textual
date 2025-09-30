@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from asyncio import gather
 from dataclasses import dataclass
 from itertools import zip_longest
 from typing import Awaitable
@@ -8,6 +7,7 @@ from typing import Awaitable
 from rich.repr import Result
 from typing_extensions import Final
 
+from textual import _async
 from textual import events
 from textual.app import ComposeResult
 from textual.await_complete import AwaitComplete
@@ -483,7 +483,7 @@ class TabbedContent(Widget):
             An optionally awaitable object which waits for all panes to be removed
                 and the Cleared message to be posted.
         """
-        await_clear = gather(
+        await_clear = _async.gather(
             self.get_child_by_type(ContentTabs).clear(),
             self.get_child_by_type(ContentSwitcher).remove_children(),
         )

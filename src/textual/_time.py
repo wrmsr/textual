@@ -1,7 +1,7 @@
-import asyncio
 import sys
-from asyncio import sleep as asyncio_sleep
 from time import monotonic, perf_counter
+
+from textual import _async
 
 WINDOWS = sys.platform == "win32"
 
@@ -25,7 +25,7 @@ if WINDOWS:
         Args:
             secs: Number of seconds to sleep for.
         """
-        await asyncio.create_task(win_sleep(secs))
+        await _async.create_task(win_sleep(secs))
 
 else:
 
@@ -40,7 +40,7 @@ else:
         # We will reduce the sleep to compensate, and also don't sleep at all for less than half a millisecond
         sleep_for = secs - 0.0005
         if sleep_for > 0:
-            await asyncio_sleep(sleep_for)
+            await _async.sleep(sleep_for)
 
 
 get_time = time

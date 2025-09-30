@@ -8,11 +8,11 @@ See the guide on how to [test Textual apps](/guide/testing).
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any, Generic
 
 import rich.repr
 
+from textual import _async
 from textual._wait import wait_for_idle
 from textual.app import App, ReturnType
 from textual.drivers.headless_driver import HeadlessDriver
@@ -477,7 +477,7 @@ class Pilot(Generic[ReturnType]):
             return False
         children = [self.app, *screen.walk_children(with_self=True)]
         count = 0
-        count_zero_event = asyncio.Event()
+        count_zero_event = _async.new_event()
 
         def decrement_counter() -> None:
             """Decrement internal counter, and set an event if it reaches zero."""
@@ -495,13 +495,13 @@ class Pilot(Generic[ReturnType]):
         if count:
             # Wait for the count to return to zero, or a timeout, or an exception
             wait_for = [
-                asyncio.create_task(count_zero_event.wait()),
-                asyncio.create_task(self.app._exception_event.wait()),
+                _async.create_task(count_zero_event.wait()),
+                _async.create_task(self.app._exception_event.wait()),
             ]
-            _, pending = await asyncio.wait(
+            _, pending = await _async.wait(
                 wait_for,
                 timeout=timeout,
-                return_when=asyncio.FIRST_COMPLETED,
+                return_when=_async.FIRST_COMPLETED,
             )
 
             for task in pending:
@@ -526,12 +526,12 @@ class Pilot(Generic[ReturnType]):
         Args:
             delay: Seconds to pause, or None to wait for cpu idle.
         """
-        # These sleep zeros, are to force asyncio to give up a time-slice.
+        # These sleep zeros, are to force async loop to give up a time-slice.
         await self._wait_for_screen()
         if delay is None:
             await wait_for_idle(0)
         else:
-            await asyncio.sleep(delay)
+            await _async.sleep(delay)
         self.app.screen._on_timer_update()
 
     async def wait_for_animation(self) -> None:

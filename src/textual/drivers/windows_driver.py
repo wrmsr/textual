@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import asyncio
 import sys
 from threading import Event, Thread
 from typing import TYPE_CHECKING, Callable
 
+from textual import _async
 from textual.driver import Driver
 from textual.drivers import win32
 from textual.drivers._writer_thread import WriterThread
@@ -85,7 +85,7 @@ class WindowsDriver(Driver):
 
     def start_application_mode(self) -> None:
         """Start application mode."""
-        loop = asyncio.get_running_loop()
+        loop = _async.get_running_loop()
 
         self._restore_console = win32.enable_application_mode()
 

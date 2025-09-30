@@ -6,9 +6,10 @@ This should only be imported on Windows.
 
 from __future__ import annotations
 
-import asyncio
 from time import sleep as time_sleep
 from typing import Coroutine
+
+from textual import _async
 
 __all__ = ["sleep"]
 
@@ -21,7 +22,7 @@ TIMER_ALL_ACCESS = 0x1F0003
 
 async def time_sleep_coro(secs: float):
     """Coroutine wrapper around `time.sleep`."""
-    await asyncio.sleep(secs)
+    await _async.sleep(secs)
 
 
 try:
@@ -92,7 +93,7 @@ else:
 
         async def cancel():
             """Cancels the timer by setting the cancel event."""
-            await asyncio.get_running_loop().run_in_executor(None, cancel_inner)
+            await _async.run_in_executor(None, cancel_inner)
 
         def wait_inner():
             """Function responsible for waiting for the timer or the cancel event."""
@@ -110,8 +111,8 @@ else:
         async def wait():
             """Wraps the actual sleeping so we can detect if the thread was cancelled."""
             try:
-                await asyncio.get_running_loop().run_in_executor(None, wait_inner)
-            except asyncio.CancelledError:
+                await _async.run_in_executor(None, wait_inner)
+            except _async.CancelledError:
                 await cancel()
                 raise
             finally:

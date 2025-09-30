@@ -5,7 +5,6 @@ This module contains the `Widget` class, the base class for all widgets.
 
 from __future__ import annotations
 
-from asyncio import create_task, gather, wait
 from collections import Counter
 from contextlib import asynccontextmanager
 from fractions import Fraction
@@ -48,6 +47,7 @@ if TYPE_CHECKING:
     from textual.app import RenderResult
 
 from textual import constants, errors, events, messages
+from textual import _async
 from textual._animator import DEFAULT_EASING, Animatable, BoundAnimator, EasingFunction
 from textual._arrange import DockArrangeResult, arrange
 from textual._context import NoActiveAppError
@@ -151,11 +151,11 @@ class AwaitMount:
         async def await_mount() -> None:
             if self._widgets:
                 aws = [
-                    create_task(widget._mounted_event.wait(), name="await mount")
+                    _async.create_task(widget._mounted_event.wait(), name="await mount")
                     for widget in self._widgets
                 ]
                 if aws:
-                    await wait(aws)
+                    await _async.wait(aws)
                     self._parent.refresh(layout=True)
                     try:
                         self._parent.app._update_mouse_over(self._parent.screen)
@@ -496,7 +496,7 @@ class Widget(DOMNode):
             self.border_subtitle = self.BORDER_SUBTITLE
 
         self.lock = RLock()
-        """`asyncio` lock to be used to synchronize the state of the widget.
+        """Async lock to be used to synchronize the state of the widget.
 
         Two different tasks might call methods on a widget at the same time, which
         might result in a race condition.
@@ -4374,7 +4374,7 @@ class Widget(DOMNode):
             node.post_message(Prune())
 
         # Wait for child nodes to exit
-        await gather(*[node._task for node in children if node._task is not None])
+        await _async.gather(*[node._task for node in children if node._task is not None])
         # Send unmount event
         await self._dispatch_message(events.Unmount())
         assert isinstance(parent, DOMNode)

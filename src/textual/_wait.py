@@ -1,5 +1,6 @@
-from asyncio import sleep
 from time import monotonic, process_time
+
+from textual._async import sleep
 
 SLEEP_GRANULARITY: float = 1 / 50
 SLEEP_IDLE: float = SLEEP_GRANULARITY / 20.0

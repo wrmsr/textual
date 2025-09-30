@@ -11,7 +11,6 @@ Arbitrary payload.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import os
 import signal
@@ -22,6 +21,7 @@ from pathlib import Path
 from threading import Event, Thread
 from typing import Any, BinaryIO, Literal, TextIO, cast
 
+from textual import _async
 from textual import events, log, messages
 from textual._binary_encode import dump as binary_dump
 from textual._xterm_parser import XTermParser
@@ -139,11 +139,11 @@ class WebDriver(Driver):
     def start_application_mode(self) -> None:
         """Start application mode."""
 
-        loop = asyncio.get_running_loop()
+        loop = _async.get_running_loop()
 
         def do_exit() -> None:
             """Callback to force exit."""
-            asyncio.run_coroutine_threadsafe(
+            _async.run_coroutine_threadsafe(
                 self._app._post_message(messages.ExitApp()), loop=loop
             )
 
@@ -161,7 +161,7 @@ class WebDriver(Driver):
 
         size = Size(80, 24) if self._size is None else Size(*self._size)
         event = events.Resize(size, size)
-        asyncio.run_coroutine_threadsafe(
+        _async.run_coroutine_threadsafe(
             self._app._post_message(event),
             loop=loop,
         )

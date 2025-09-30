@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-import asyncio
-from asyncio import Event
 from collections import deque
 from typing import Generic, TypeVar
+
+from textual import _async
+
+from textual import _async
 
 QueueType = TypeVar("QueueType")
 
@@ -17,7 +19,7 @@ class Queue(Generic[QueueType]):
 
     def __init__(self) -> None:
         self.values: deque[QueueType] = deque()
-        self.ready_event = Event()
+        self.ready_event = _async.new_event()
 
     def put_nowait(self, value: QueueType) -> None:
         self.values.append(value)
@@ -42,7 +44,7 @@ class Queue(Generic[QueueType]):
 
     def get_nowait(self) -> QueueType:
         if not self.values:
-            raise asyncio.QueueEmpty()
+            raise _async.QueueEmpty()
         value = self.values.popleft()
         if not self.values:
             self.ready_event.clear()

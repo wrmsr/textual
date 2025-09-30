@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-from asyncio import Lock, Task, current_task
+from textual import _async
 
 
 class RLock:
-    """A re-entrant asyncio lock."""
+    """A re-entrant async lock."""
 
     def __init__(self) -> None:
-        self._owner: Task | None = None
+        self._owner: _async.Task | None = None
         self._count = 0
-        self._lock = Lock()
+        self._lock = _async.new_lock()
 
     async def acquire(self) -> None:
         """Wait until the lock can be acquired."""
-        task = current_task()
+        task = _async.current_task()
         assert task is not None
         if self._owner is None or self._owner is not task:
             await self._lock.acquire()
@@ -22,7 +22,7 @@ class RLock:
 
     def release(self) -> None:
         """Release a previously acquired lock."""
-        task = current_task()
+        task = _async.current_task()
         assert task is not None
         self._count -= 1
         if self._count < 0:
@@ -48,14 +48,10 @@ class RLock:
 
 
 if __name__ == "__main__":
-    from asyncio import Lock
-
     async def locks():
         lock = RLock()
         async with lock:
             async with lock:
                 print("Hello")
 
-    import asyncio
-
-    asyncio.run(locks())
+    _async.run(locks())

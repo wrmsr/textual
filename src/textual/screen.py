@@ -8,7 +8,6 @@ The `Screen` class is a special widget which represents the content in the termi
 
 from __future__ import annotations
 
-import asyncio
 from functools import partial
 from operator import attrgetter
 from typing import (
@@ -31,6 +30,7 @@ from rich.console import RenderableType
 from rich.style import Style
 
 from textual import constants, errors, events, messages
+from textual import _async
 from textual._arrange import arrange
 from textual._callback import invoke
 from textual._compositor import Compositor, MapGeometry
@@ -109,7 +109,7 @@ class ResultCallback(Generic[ScreenResultType]):
         self,
         requester: MessagePump,
         callback: ScreenResultCallbackType[ScreenResultType] | None,
-        future: asyncio.Future[ScreenResultType] | None = None,
+        future: _async.Future[ScreenResultType] | None = None,
     ) -> None:
         """Initialise the result callback object.
 
@@ -1231,7 +1231,7 @@ class Screen(Generic[ScreenResultType], Widget):
         self,
         requester: MessagePump,
         callback: ScreenResultCallbackType[ScreenResultType] | None,
-        future: asyncio.Future[ScreenResultType | None] | None = None,
+        future: _async.Future[ScreenResultType | None] | None = None,
     ) -> None:
         """Add a result callback to the screen.
 

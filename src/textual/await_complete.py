@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from asyncio import Future, gather
 from typing import TYPE_CHECKING, Any, Awaitable, Generator
 
 import rich.repr
 from typing_extensions import Self
 
+from textual import _async
 from textual._debug import get_caller_file_and_line
 from textual.message_pump import MessagePump
 
@@ -26,7 +26,7 @@ class AwaitComplete:
             awaitables: One or more awaitables to run concurrently.
         """
         self._awaitables = awaitables
-        self._future: Future[Any] = gather(*awaitables)
+        self._future: _async.Future[Any] = _async.gather(*awaitables)
         self._pre_await: CallbackType | None = pre_await
         self._caller = get_caller_file_and_line()
 
@@ -80,6 +80,6 @@ class AwaitComplete:
     def nothing(cls):
         """Returns an already completed instance of AwaitComplete."""
         instance = cls()
-        instance._future = Future()
+        instance._future = _async.new_future()
         instance._future.set_result(None)  # Mark it as completed with no result
         return instance

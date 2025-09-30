@@ -8,12 +8,11 @@ Timer objects are created by [set_interval][textual.message_pump.MessagePump.set
 from __future__ import annotations
 
 import weakref
-from asyncio import CancelledError, Event, Task, create_task, gather
 from typing import Any, Awaitable, Callable, Iterable, Union
 
 from rich.repr import Result, rich_repr
 
-from textual import _time, events
+from textual import _async, _time, events
 from textual._callback import invoke
 from textual._compat import cached_property
 from textual._context import active_app
@@ -63,13 +62,13 @@ class Timer:
         self._callback = callback
         self._repeat = repeat
         self._skip = skip
-        self._task: Task | None = None
+        self._task: _async.Task | None = None
         self._reset: bool = False
         self._original_pause = pause
 
     @cached_property
-    def _active(self) -> Event:
-        event = Event()
+    def _active(self) -> _async.Event:
+        event = _async.new_event()
         if not self._original_pause:
             event.set()
         return event
@@ -88,7 +87,7 @@ class Timer:
 
     def _start(self) -> None:
         """Start the timer."""
-        self._task = create_task(self._run_timer(), name=self.name)
+        self._task = _async.create_task(self._run_timer(), name=self.name)
 
     def stop(self) -> None:
         """Stop the timer."""
@@ -118,11 +117,11 @@ class Timer:
                 timer._task.cancel()
                 try:
                     await timer._task
-                except CancelledError:
+                except _async.CancelledError:
                     pass
                 timer._task = None
 
-        await gather(*[stop_timer(timer) for timer in list(timers)])
+        await _async.gather(*[stop_timer(timer) for timer in list(timers)])
 
     def pause(self) -> None:
         """Pause the timer.
@@ -144,7 +143,7 @@ class Timer:
         """Run the timer task."""
         try:
             await self._run()
-        except CancelledError:
+        except _async.CancelledError:
             pass
 
     async def _run(self) -> None:
@@ -187,7 +186,7 @@ class Timer:
         if self._callback is not None:
             try:
                 await invoke(self._callback)
-            except CancelledError:
+            except _async.CancelledError:
                 # https://github.com/Textualize/textual/pull/2895
                 # Re-raise CancelledErrors that would be caught by the following exception block in Python 3.7
                 raise

@@ -8,15 +8,6 @@ See the guide on the [Command Palette](../guide/command_palette.md) for full det
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from asyncio import (
-    CancelledError,
-    Queue,
-    Task,
-    TimeoutError,
-    create_task,
-    wait,
-    wait_for,
-)
 from dataclasses import dataclass
 from functools import total_ordering
 from inspect import isclass
@@ -39,6 +30,7 @@ from rich.text import Text
 from typing_extensions import Final, TypeAlias
 
 from textual import on, work
+from textual import _async
 from textual.binding import Binding, BindingType
 from textual.containers import Horizontal, Vertical
 from textual.content import Content
@@ -195,7 +187,7 @@ class Provider(ABC):
             ), "match_style must be a Visual style (from textual.style import Style)"
         self.__screen = screen
         self.__match_style = match_style
-        self._init_task: Task | None = None
+        self._init_task: _async.Task | None = None
         self._init_success = False
 
     @property
@@ -251,7 +243,7 @@ class Provider(ABC):
             else:
                 self._init_success = True
 
-        self._init_task = create_task(post_init_task())
+        self._init_task = _async.create_task(post_init_task())
 
     async def _wait_init(self) -> None:
         """Wait for initialization."""
@@ -825,8 +817,8 @@ class CommandPalette(SystemModalScreen[None]):
     async def _on_unmount(self) -> None:  # type: ignore[override]
         """Shutdown providers when command palette is closed."""
         if self._providers:
-            await wait(
-                [create_task(provider._shutdown()) for provider in self._providers],
+            await _async.wait(
+                [_async.create_task(provider._shutdown()) for provider in self._providers],
             )
             self._providers.clear()
 
@@ -913,7 +905,7 @@ class CommandPalette(SystemModalScreen[None]):
         self.query_one(CommandList).set_class(self._show_busy, "--populating")
 
     @staticmethod
-    async def _consume(hits: Hits, commands: Queue[DiscoveryHit | Hit]) -> None:
+    async def _consume(hits: Hits, commands: _async.Queue[DiscoveryHit | Hit]) -> None:
         """Consume a source of matching commands, feeding the given command queue.
 
         Args:
@@ -936,12 +928,12 @@ class CommandPalette(SystemModalScreen[None]):
         """
 
         # Set up a queue to stream in the command hits from all the providers.
-        commands: Queue[DiscoveryHit | Hit] = Queue()
+        commands: _async.Queue[DiscoveryHit | Hit] = _async.new_queue()
 
         # Fire up an instance of each command provider, inside a task, and
         # have them go start looking for matches.
         searches = [
-            create_task(
+            _async.create_task(
                 self._consume(
                     provider._search(search_value),
                     commands,
@@ -960,12 +952,12 @@ class CommandPalette(SystemModalScreen[None]):
             try:
                 # ...briefly wait for something on the stack. If we get
                 # something yield it up to our caller.
-                aborted = yield await wait_for(commands.get(), 0.1)
-            except TimeoutError:
+                aborted = yield await _async.wait_for(commands.get(), 0.1)
+            except _async.TimeoutError:
                 # A timeout is fine. We're just going to go back round again
                 # and see if anything else has turned up.
                 pass
-            except CancelledError:
+            except _async.CancelledError:
                 # A cancelled error means things are being aborted.
                 aborted = True
             else:

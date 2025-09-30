@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import asyncio
 import threading
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, BinaryIO, Iterator, Literal, TextIO
 
-from textual import events, log, messages
+from textual import _async, events, log, messages
 from textual.events import MouseUp
 
 if TYPE_CHECKING:
@@ -37,7 +36,7 @@ class Driver(ABC):
         self._debug = debug
         self._mouse = mouse
         self._size = size
-        self._loop = asyncio.get_running_loop()
+        self._loop = _async.get_running_loop()
         self._down_buttons: list[int] = []
         self._last_move_event: events.MouseMove | None = None
         self._auto_restart = True
@@ -70,7 +69,7 @@ class Driver(ABC):
         Args:
             message: A message.
         """
-        asyncio.run_coroutine_threadsafe(
+        _async.run_coroutine_threadsafe(
             self._app._post_message(message), loop=self._loop
         )
 

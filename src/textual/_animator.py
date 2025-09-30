@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from functools import partial
@@ -8,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 from typing_extensions import Protocol, runtime_checkable
 
+from textual import _async
 from textual import _time
 from textual._callback import invoke
 from textual._compat import cached_property
@@ -245,14 +245,14 @@ class Animator:
         )
 
     @cached_property
-    def _idle_event(self) -> asyncio.Event:
+    def _idle_event(self) -> _async.Event:
         """The timer that runs the animator."""
-        return asyncio.Event()
+        return _async.new_event()
 
     @cached_property
-    def _complete_event(self) -> asyncio.Event:
+    def _complete_event(self) -> _async.Event:
         """Flag if no animations are currently taking place."""
-        return asyncio.Event()
+        return _async.new_event()
 
     async def start(self) -> None:
         """Start the animator task."""
@@ -264,7 +264,7 @@ class Animator:
         """Stop the animator task."""
         try:
             self._timer.stop()
-        except asyncio.CancelledError:
+        except _async.CancelledError:
             pass
         finally:
             self._idle_event.set()

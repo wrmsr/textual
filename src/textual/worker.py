@@ -7,7 +7,6 @@ See the guide for how to use [workers](/guide/workers).
 
 from __future__ import annotations
 
-import asyncio
 import enum
 import inspect
 from contextvars import ContextVar
@@ -27,6 +26,7 @@ from typing import (
 import rich.repr
 from typing_extensions import TypeAlias
 
+from textual import _async
 from textual.message import Message
 
 if TYPE_CHECKING:
@@ -179,7 +179,7 @@ class Worker(Generic[ResultType]):
         self._cancelled: bool = False
         self._created_time = monotonic()
         self._result: ResultType | None = None
-        self._task: asyncio.Task | None = None
+        self._task: _async.Task | None = None
         self._node.post_message(self.StateChanged(self, self._state))
 
     def __rich_repr__(self) -> rich.repr.Result:
@@ -295,7 +295,7 @@ class Worker(Generic[ResultType]):
                 active_worker.set(self)
                 return await work
 
-            return asyncio.run(do_work())
+            return _async.run(do_work())
 
         def run_coroutine(
             work: Callable[[], Coroutine[None, None, ResultType]],
@@ -321,7 +321,7 @@ class Worker(Generic[ResultType]):
         else:
             raise WorkerError("Unsupported attempt to run a thread worker")
 
-        loop = asyncio.get_running_loop()
+        loop = _async.get_running_loop()
         assert loop is not None
         return await loop.run_in_executor(None, runner, self._work)
 
@@ -368,7 +368,7 @@ class Worker(Generic[ResultType]):
             app.log.worker(self)
             try:
                 self._result = await self.run()
-            except asyncio.CancelledError as error:
+            except _async.CancelledError as error:
                 self.state = WorkerState.CANCELLED
                 self._error = error
                 app.log.worker(self)
@@ -398,9 +398,9 @@ class Worker(Generic[ResultType]):
         if self._task is not None:
             return
         self.state = WorkerState.RUNNING
-        self._task = asyncio.create_task(self._run(app))
+        self._task = _async.create_task(self._run(app))
 
-        def task_done_callback(_task: asyncio.Task) -> None:
+        def task_done_callback(_task: _async.Task) -> None:
             """Run the callback.
 
             Called by `Task.add_done_callback`.
@@ -444,7 +444,7 @@ class Worker(Generic[ResultType]):
         if self._task is not None:
             try:
                 await self._task
-            except asyncio.CancelledError as error:
+            except _async.CancelledError as error:
                 self.state = WorkerState.CANCELLED
                 self._error = error
         if self.state == WorkerState.ERROR:

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import os
 import selectors
 import signal
@@ -13,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 import rich.repr
 
+from textual import _async
 from textual import events
 from textual._loop import loop_last
 from textual._parser import ParseError
@@ -221,14 +221,14 @@ class LinuxDriver(Driver):
                 signal.signal(signal.SIGTTOU, signal.SIG_DFL)
                 signal.signal(signal.SIGTTIN, signal.SIG_DFL)
 
-        loop = asyncio.get_running_loop()
+        loop = _async.get_running_loop()
 
         def send_size_event() -> None:
             terminal_size = self._get_terminal_size()
             width, height = terminal_size
             textual_size = Size(width, height)
             event = events.Resize(textual_size, textual_size)
-            asyncio.run_coroutine_threadsafe(
+            _async.run_coroutine_threadsafe(
                 self._app._post_message(event),
                 loop=loop,
             )
@@ -291,7 +291,7 @@ class LinuxDriver(Driver):
         # SIGTSTP...
         if self._must_signal_resume:
             self._must_signal_resume = False
-            asyncio.run_coroutine_threadsafe(
+            _async.run_coroutine_threadsafe(
                 self._app._post_message(self.SignalResume()),
                 loop=loop,
             )

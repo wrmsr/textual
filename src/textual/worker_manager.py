@@ -6,13 +6,13 @@ You access this object via [App.workers][textual.app.App.workers] or [Widget.wor
 
 from __future__ import annotations
 
-import asyncio
 from collections import Counter
 from operator import attrgetter
 from typing import TYPE_CHECKING, Any, Iterable, Iterator
 
 import rich.repr
 
+from textual import _async
 from textual.worker import Worker, WorkerState, WorkType
 
 if TYPE_CHECKING:
@@ -176,6 +176,6 @@ class WorkerManager:
             workers: An iterable of workers or None to wait for all workers in the manager.
         """
         try:
-            await asyncio.gather(*[worker.wait() for worker in (workers or self)])
-        except asyncio.CancelledError:
+            await _async.gather(*[worker.wait() for worker in (workers or self)])
+        except _async.CancelledError:
             pass

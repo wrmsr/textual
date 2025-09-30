@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from asyncio import Queue
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, ClassVar, Iterable, Iterator
@@ -8,6 +7,7 @@ from typing import TYPE_CHECKING, Callable, ClassVar, Iterable, Iterator
 from rich.style import Style
 from rich.text import Text, TextType
 
+from textual import _async
 from textual import work
 from textual.await_complete import AwaitComplete
 from textual.message import Message
@@ -172,7 +172,7 @@ class DirectoryTree(Tree[DirEntry]):
             classes: A space-separated list of classes, or None for no classes.
             disabled: Whether the directory tree is disabled or not.
         """
-        self._load_queue: Queue[TreeNode[DirEntry]] = Queue()
+        self._load_queue: _async.Queue[TreeNode[DirEntry]] = _async.new_queue()
         super().__init__(
             str(path),
             data=DirEntry(self.PATH(path)),
@@ -209,7 +209,7 @@ class DirectoryTree(Tree[DirEntry]):
             An optionally awaitable that ensures the tree has finished reloading.
         """
         # Orphan the old queue...
-        self._load_queue = Queue()
+        self._load_queue = _async.new_queue()
         # ... reset the root node ...
         processed = self.reload_node(self.root)
         # ...and replace the old load with a new one.

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import asyncio
-
+from textual import _async
 from textual import events
 from textual.driver import Driver
 from textual.geometry import Size
@@ -43,7 +42,7 @@ class HeadlessDriver(Driver):
 
     def start_application_mode(self) -> None:
         """Start application mode."""
-        loop = asyncio.get_running_loop()
+        loop = _async.get_running_loop()
 
         def send_size_event() -> None:
             """Send first resize event."""
@@ -51,7 +50,7 @@ class HeadlessDriver(Driver):
             width, height = terminal_size
             textual_size = Size(width, height)
             event = events.Resize(textual_size, textual_size)
-            asyncio.run_coroutine_threadsafe(
+            _async.run_coroutine_threadsafe(
                 self._app._post_message(event),
                 loop=loop,
             )
