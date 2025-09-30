@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import sys
 import typing as ta
@@ -22,49 +24,78 @@ def sleep(delay):
 ##
 
 
-class Future(ta.Protocol[T]):
-    def cancel(self) -> bool: ...
-    def add_done_callback(self, fn) -> None: ...
-    def set_result(self, result: T) -> None: ...
-    def cancelled(self) -> bool: ...
-    def done(self) -> bool: ...
-    def result(self) -> T: ...
-    def exception(self) -> BaseException | None: ...
+class Future(ta.Generic[T]):
+    def __init__(self, *, _underlying: asyncio.Future[T]) -> None:
+        super().__init__()
+        self._underlying = _underlying
 
-    def __await__(self) -> ta.Generator[ta.Any, None, T]: ...
+    def cancel(self) -> bool:
+        return self._underlying.cancel()
+
+    def add_done_callback(self, fn) -> None:
+        self._underlying.add_done_callback(fn)
+
+    def set_result(self, result: T) -> None:
+        self._underlying.set_result(result)
+
+    def cancelled(self) -> bool:
+        return self._underlying.cancelled()
+
+    def done(self) -> bool:
+        return self._underlying.done()
+
+    def result(self) -> T:
+        return self._underlying.result()
+
+    def exception(self) -> BaseException | None:
+        return self._underlying.exception()
+
+    def __await__(self) -> ta.Generator[ta.Any, None, T]:
+        return self._underlying.__await__()
 
 
 def new_future() -> Future:
-    return asyncio.Future()
+    return Future(_underlying=asyncio.Future())
 
 
 ##
 
 
-class Task(Future[T], ta.Protocol[T]):
-    pass
+class Task(Future[T]):
+    def __init__(self, *, _underlying: asyncio.Task[T]) -> None:
+        super().__init__(_underlying=_underlying)
+
+    _underlying: asyncio.Task[T]
 
 
-def current_task() -> Task:
-    return asyncio.current_task()
+def current_task() -> Task | None:
+    ut = asyncio.current_task()
+    if ut is None:
+        return None
+    return Task(_underlying=ut)
 
 
 def create_task(coro, name=None, context=None) -> Task:
-    return asyncio.create_task(coro, name=name, context=context)
+    return Task(_underlying=asyncio.create_task(coro, name=name, context=context))
 
 
 ##
 
 
-class TimerHandle(ta.Protocol):
-    def cancel(self) -> None: ...
+class TimerHandle:
+    def __init__(self, *, _underlying: asyncio.TimerHandle) -> None:
+        super().__init__()
+        self._underlying = _underlying
+
+    def cancel(self) -> None:
+        return self._underlying.cancel()
 
 
 def call_later(
         delay: float,
         callback: ta.Callable
 ) -> TimerHandle:
-    return asyncio.get_running_loop().call_later(delay, callback)
+    return TimerHandle(_underlying=asyncio.get_running_loop().call_later(delay, callback))
 
 
 ##
@@ -78,7 +109,10 @@ async def run_in_executor(fn, *args):
 
 
 def gather(*coros_or_futures, return_exceptions=False):
-    return asyncio.gather(*coros_or_futures, return_exceptions=return_exceptions)
+    return asyncio.gather(
+        *[obj._underlying if isinstance(obj, Future) else obj for obj in coros_or_futures],
+        return_exceptions=return_exceptions,
+    )
 
 
 ALL_COMPLETED = asyncio.ALL_COMPLETED
@@ -87,35 +121,52 @@ FIRST_EXCEPTION = asyncio.FIRST_EXCEPTION
 
 
 def wait(fs, *, timeout=None, return_when=ALL_COMPLETED):
-    return asyncio.wait(fs, timeout=timeout, return_when=return_when)
+    return asyncio.wait(
+        [obj._underlying if isinstance(obj, Future) else obj for obj in fs],
+        timeout=timeout,
+        return_when=return_when,
+    )
 
 
 def wait_for(fut, timeout):
-    return asyncio.wait_for(fut, timeout=timeout)
+    return asyncio.wait_for(fut._underlying if isinstance(fut, Future) else fut, timeout=timeout)
 
 
 ##
 
 
-class Loop(ta.Protocol):
-    def add_signal_handler(self, sig, callback, *args): ...
-    def call_soon_threadsafe(self, callback, *args, context=None): ...
-    def create_future(self) -> Future: ...
-    def run_in_executor(self, executor, func, *args): ...
-    def run_until_complete(self, future): ...
+class Loop:
+    def __init__(self, *, _underlying: asyncio.AbstractEventLoop) -> None:
+        super().__init__()
+        self._underlying = _underlying
+
+    def add_signal_handler(self, sig, callback, *args):
+        return self._underlying.add_signal_handler(sig, callback, *args)
+
+    def call_soon_threadsafe(self, callback, *args, context=None):
+        return self._underlying.call_soon_threadsafe(callback, *args, context=context)
+
+    def create_future(self) -> Future:
+        return Future(_underlying=self._underlying.create_future())
+
+    def run_in_executor(self, executor, func, *args):
+        return self._underlying.run_in_executor(executor, func, *args)
+
+    def run_until_complete(self, future):
+        return self._underlying.run_until_complete(future)
 
 
 def get_running_loop() -> Loop:
-    return asyncio.get_running_loop()
+    return Loop(_underlying=asyncio.get_running_loop())
 
 
-def run_coroutine_threadsafe(coro, loop):
-    return asyncio.run_coroutine_threadsafe(coro, loop)
+def run_coroutine_threadsafe(coro, loop: Loop):
+    return asyncio.run_coroutine_threadsafe(coro, loop._underlying)
 
 
-def set_loop_eager_task_factory(loop):
+def set_loop_eager_task_factory(loop: Loop):
     if hasattr(asyncio, "eager_task_factory"):
-        loop.set_task_factory(asyncio.eager_task_factory)
+        loop._underlying.set_task_factory(asyncio.eager_task_factory)
 
 
 ##
