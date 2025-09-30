@@ -176,7 +176,7 @@ class LinuxInlineDriver(Driver):
                 pass
 
     def start_application_mode(self) -> None:
-        loop = _async.get_running_loop()
+        loop = _async.get().get_running_loop()
 
         def send_size_event(clear: bool = False) -> None:
             """Send the resize event, optionally clearing the screen.
@@ -195,7 +195,7 @@ class LinuxInlineDriver(Driver):
                     self.write("\x1b[2J")
                 await self._app._post_message(event)
 
-            _async.run_coroutine_threadsafe(
+            _async.get().run_coroutine_threadsafe(
                 update_size(),
                 loop=loop,
             )

@@ -22,7 +22,7 @@ TIMER_ALL_ACCESS = 0x1F0003
 
 async def time_sleep_coro(secs: float):
     """Coroutine wrapper around `time.sleep`."""
-    await _async.sleep(secs)
+    await _async.get().sleep(secs)
 
 
 try:
@@ -93,7 +93,7 @@ else:
 
         async def cancel():
             """Cancels the timer by setting the cancel event."""
-            await _async.run_in_executor(None, cancel_inner)
+            await _async.get().run_in_executor(None, cancel_inner)
 
         def wait_inner():
             """Function responsible for waiting for the timer or the cancel event."""
@@ -111,7 +111,7 @@ else:
         async def wait():
             """Wraps the actual sleeping so we can detect if the thread was cancelled."""
             try:
-                await _async.run_in_executor(None, wait_inner)
+                await _async.get().run_in_executor(None, wait_inner)
             except _async.CancelledError:
                 await cancel()
                 raise

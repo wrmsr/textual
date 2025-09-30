@@ -1,6 +1,6 @@
 from time import monotonic, process_time
 
-from textual._async import sleep
+from textual import _async
 
 SLEEP_GRANULARITY: float = 1 / 50
 SLEEP_IDLE: float = SLEEP_GRANULARITY / 20.0
@@ -27,7 +27,7 @@ async def wait_for_idle(
     while True:
         cpu_time = process_time()
         # Sleep for a predetermined amount of time
-        await sleep(SLEEP_GRANULARITY)
+        await _async.get().sleep(SLEEP_GRANULARITY)
         # Calculate the wall clock elapsed time and the process elapsed time
         cpu_elapsed = process_time() - cpu_time
         elapsed_time = monotonic() - start_time

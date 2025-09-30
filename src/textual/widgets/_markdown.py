@@ -53,7 +53,7 @@ class MarkdownStream:
         """
         self.markdown_widget = markdown_widget
         self._task: _async.Task | None = None
-        self._new_markup = _async.new_event()
+        self._new_markup = _async.get().new_event()
         self._pending: list[str] = []
         self._stopped = False
 
@@ -64,7 +64,7 @@ class MarkdownStream:
 
         """
         if self._task is None:
-            self._task = _async.create_task(self._run())
+            self._task = _async.get().create_task(self._run())
 
     async def stop(self) -> None:
         """Stop the stream and await its finish."""
@@ -89,7 +89,7 @@ class MarkdownStream:
         self._pending.append(markdown_fragment)
         self._new_markup.set()
         # Allow the task to wake up and actually display the new markdown
-        await _async.sleep(0)
+        await _async.get().sleep(0)
 
     async def _run(self) -> None:
         """Run a task to append markdown fragments when available."""
@@ -98,7 +98,7 @@ class MarkdownStream:
                 new_markdown = "".join(self._pending)
                 self._pending.clear()
                 self._new_markup.clear()
-                await _async.shield(self.markdown_widget.append(new_markdown))
+                await _async.get().shield(self.markdown_widget.append(new_markdown))
         except _async.CancelledError:
             # Task has been cancelled, add any outstanding markdown
             pass
@@ -1185,7 +1185,7 @@ class Markdown(Widget):
             those that can be raised by calling [`Path.read_text`][pathlib.Path.read_text].
         """
         path, anchor = self.sanitize_location(str(path))
-        data = await _async.run_in_executor(
+        data = await _async.get().run_in_executor(
             partial(path.read_text, encoding="utf-8")
         )
         await self.update(data)
@@ -1336,7 +1336,7 @@ class Markdown(Widget):
 
             # Lock so that you can't update with more than one document simultaneously
             async with self.lock:
-                tokens = await _async.run_in_executor(
+                tokens = await _async.get().run_in_executor(
                     parser.parse, markdown
                 )
 

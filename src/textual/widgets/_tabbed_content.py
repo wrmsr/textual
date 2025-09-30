@@ -482,7 +482,7 @@ class TabbedContent(Widget):
             An optionally awaitable object which waits for all panes to be removed
                 and the Cleared message to be posted.
         """
-        await_clear = _async.gather(
+        await_clear = _async.get().gather(
             self.get_child_by_type(ContentTabs).clear(),
             self.get_child_by_type(ContentSwitcher).remove_children(),
         )

@@ -176,6 +176,6 @@ class WorkerManager:
             workers: An iterable of workers or None to wait for all workers in the manager.
         """
         try:
-            await _async.gather(*[worker.wait() for worker in (workers or self)])
+            await _async.get().gather(*[worker.wait() for worker in (workers or self)])
         except _async.CancelledError:
             pass

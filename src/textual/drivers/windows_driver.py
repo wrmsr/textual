@@ -85,7 +85,7 @@ class WindowsDriver(Driver):
 
     def start_application_mode(self) -> None:
         """Start application mode."""
-        loop = _async.get_running_loop()
+        loop = _async.get().get_running_loop()
 
         self._restore_console = win32.enable_application_mode()
 

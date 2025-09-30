@@ -84,7 +84,7 @@ async def invoke(callback: Callable[..., Any], *params: object) -> Any:
                 f"Callback {callback} is still pending after {INVOKE_TIMEOUT_WARNING} seconds"
             )
 
-        call_later_handle = _async.call_later(
+        call_later_handle = _async.get().call_later(
             INVOKE_TIMEOUT_WARNING, log_slow
         )
         try:

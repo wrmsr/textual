@@ -34,12 +34,12 @@ class AwaitRemove:
         await self
 
     def __await__(self) -> Generator[None, None, None]:
-        current_task = _async.current_task()
+        current_task = _async.get().current_task()
         tasks = [task for task in self._tasks if task is not current_task]
 
         async def await_prune() -> None:
             """Wait for the prune operation to finish."""
-            await _async.gather(*tasks)
+            await _async.get().gather(*tasks)
             if self._post_remove is not None:
                 await invoke(self._post_remove)
 

@@ -246,12 +246,12 @@ class Animator:
     @cached_property
     def _idle_event(self) -> _async.Event:
         """The timer that runs the animator."""
-        return _async.new_event()
+        return _async.get().new_event()
 
     @cached_property
     def _complete_event(self) -> _async.Event:
         """Flag if no animations are currently taking place."""
-        return _async.new_event()
+        return _async.get().new_event()
 
     async def start(self) -> None:
         """Start the animator task."""

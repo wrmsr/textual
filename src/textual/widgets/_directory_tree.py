@@ -171,7 +171,7 @@ class DirectoryTree(Tree[DirEntry]):
             classes: A space-separated list of classes, or None for no classes.
             disabled: Whether the directory tree is disabled or not.
         """
-        self._load_queue: _async.Queue[TreeNode[DirEntry]] = _async.new_queue()
+        self._load_queue: _async.Queue[TreeNode[DirEntry]] = _async.get().new_queue()
         super().__init__(
             str(path),
             data=DirEntry(self.PATH(path)),
@@ -208,7 +208,7 @@ class DirectoryTree(Tree[DirEntry]):
             An optionally awaitable that ensures the tree has finished reloading.
         """
         # Orphan the old queue...
-        self._load_queue = _async.new_queue()
+        self._load_queue = _async.get().new_queue()
         # ... reset the root node ...
         processed = self.reload_node(self.root)
         # ...and replace the old load with a new one.

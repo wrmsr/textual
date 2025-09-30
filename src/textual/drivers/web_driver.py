@@ -138,11 +138,11 @@ class WebDriver(Driver):
     def start_application_mode(self) -> None:
         """Start application mode."""
 
-        loop = _async.get_running_loop()
+        loop = _async.get().get_running_loop()
 
         def do_exit() -> None:
             """Callback to force exit."""
-            _async.run_coroutine_threadsafe(
+            _async.get().run_coroutine_threadsafe(
                 self._app._post_message(messages.ExitApp()), loop=loop
             )
 
@@ -160,7 +160,7 @@ class WebDriver(Driver):
 
         size = Size(80, 24) if self._size is None else Size(*self._size)
         event = events.Resize(size, size)
-        _async.run_coroutine_threadsafe(
+        _async.get().run_coroutine_threadsafe(
             self._app._post_message(event),
             loop=loop,
         )

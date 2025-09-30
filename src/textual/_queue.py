@@ -17,7 +17,7 @@ class Queue(Generic[QueueType]):
 
     def __init__(self) -> None:
         self.values: deque[QueueType] = deque()
-        self.ready_event = _async.new_event()
+        self.ready_event = _async.get().new_event()
 
     def put_nowait(self, value: QueueType) -> None:
         self.values.append(value)

@@ -36,7 +36,7 @@ class Driver(ABC):
         self._debug = debug
         self._mouse = mouse
         self._size = size
-        self._loop = _async.get_running_loop()
+        self._loop = _async.get().get_running_loop()
         self._down_buttons: list[int] = []
         self._last_move_event: events.MouseMove | None = None
         self._auto_restart = True
@@ -69,7 +69,7 @@ class Driver(ABC):
         Args:
             message: A message.
         """
-        _async.run_coroutine_threadsafe(
+        _async.get().run_coroutine_threadsafe(
             self._app._post_message(message), loop=self._loop
         )
 

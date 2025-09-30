@@ -68,7 +68,7 @@ class Timer:
 
     @cached_property
     def _active(self) -> _async.Event:
-        event = _async.new_event()
+        event = _async.get().new_event()
         if not self._original_pause:
             event.set()
         return event
@@ -87,7 +87,7 @@ class Timer:
 
     def _start(self) -> None:
         """Start the timer."""
-        self._task = _async.create_task(self._run_timer(), name=self.name)
+        self._task = _async.get().create_task(self._run_timer(), name=self.name)
 
     def stop(self) -> None:
         """Stop the timer."""
@@ -121,7 +121,7 @@ class Timer:
                     pass
                 timer._task = None
 
-        await _async.gather(*[stop_timer(timer) for timer in list(timers)])
+        await _async.get().gather(*[stop_timer(timer) for timer in list(timers)])
 
     def pause(self) -> None:
         """Pause the timer.

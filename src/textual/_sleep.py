@@ -14,7 +14,7 @@ class Sleeper(Thread):
         self._sleep_time = 0.0
         self._event = Event()
         self.future: _async.Future | None = None
-        self._loop = _async.get_running_loop()
+        self._loop = _async.get().get_running_loop()
         super().__init__(daemon=True)
 
     def run(self):
@@ -56,4 +56,4 @@ async def check_sleeps() -> None:
         )
 
 
-_async.run(check_sleeps())
+_async.get().run(check_sleeps())

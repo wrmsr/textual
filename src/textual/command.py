@@ -242,7 +242,7 @@ class Provider(ABC):
             else:
                 self._init_success = True
 
-        self._init_task = _async.create_task(post_init_task())
+        self._init_task = _async.get().create_task(post_init_task())
 
     async def _wait_init(self) -> None:
         """Wait for initialization."""
@@ -816,8 +816,8 @@ class CommandPalette(SystemModalScreen[None]):
     async def _on_unmount(self) -> None:  # type: ignore[override]
         """Shutdown providers when command palette is closed."""
         if self._providers:
-            await _async.wait(
-                [_async.create_task(provider._shutdown()) for provider in self._providers],
+            await _async.get().wait(
+                [_async.get().create_task(provider._shutdown()) for provider in self._providers],
             )
             self._providers.clear()
 
@@ -927,12 +927,12 @@ class CommandPalette(SystemModalScreen[None]):
         """
 
         # Set up a queue to stream in the command hits from all the providers.
-        commands: _async.Queue[DiscoveryHit | Hit] = _async.new_queue()
+        commands: _async.Queue[DiscoveryHit | Hit] = _async.get().new_queue()
 
         # Fire up an instance of each command provider, inside a task, and
         # have them go start looking for matches.
         searches = [
-            _async.create_task(
+            _async.get().create_task(
                 self._consume(
                     provider._search(search_value),
                     commands,
@@ -951,7 +951,7 @@ class CommandPalette(SystemModalScreen[None]):
             try:
                 # ...briefly wait for something on the stack. If we get
                 # something yield it up to our caller.
-                aborted = yield await _async.wait_for(commands.get(), 0.1)
+                aborted = yield await _async.get().wait_for(commands.get(), 0.1)
             except _async.TimeoutError:
                 # A timeout is fine. We're just going to go back round again
                 # and see if anything else has turned up.

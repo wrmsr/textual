@@ -9,11 +9,11 @@ class RLock:
     def __init__(self) -> None:
         self._owner: _async.Task | None = None
         self._count = 0
-        self._lock = _async.new_lock()
+        self._lock = _async.get().new_lock()
 
     async def acquire(self) -> None:
         """Wait until the lock can be acquired."""
-        task = _async.current_task()
+        task = _async.get().current_task()
         assert task is not None
         if self._owner is None or self._owner is not task:
             await self._lock.acquire()
@@ -22,7 +22,7 @@ class RLock:
 
     def release(self) -> None:
         """Release a previously acquired lock."""
-        task = _async.current_task()
+        task = _async.get().current_task()
         assert task is not None
         self._count -= 1
         if self._count < 0:
@@ -54,4 +54,4 @@ if __name__ == "__main__":
             async with lock:
                 print("Hello")
 
-    _async.run(locks())
+    _async.get().run(locks())

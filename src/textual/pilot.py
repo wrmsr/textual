@@ -477,7 +477,7 @@ class Pilot(Generic[ReturnType]):
             return False
         children = [self.app, *screen.walk_children(with_self=True)]
         count = 0
-        count_zero_event = _async.new_event()
+        count_zero_event = _async.get().new_event()
 
         def decrement_counter() -> None:
             """Decrement internal counter, and set an event if it reaches zero."""
@@ -495,11 +495,11 @@ class Pilot(Generic[ReturnType]):
         if count:
             # Wait for the count to return to zero, or a timeout, or an exception
             wait_for = [
-                _async.create_task(count_zero_event.wait()),
-                _async.create_task(self.app._exception_event.wait()),
+                _async.get().create_task(count_zero_event.wait()),
+                _async.get().create_task(self.app._exception_event.wait()),
             ]
 
-            _, pending = await _async.wait(
+            _, pending = await _async.get().wait(
                 wait_for,
                 timeout=timeout,
                 return_when=_async.FIRST_COMPLETED,
@@ -532,7 +532,7 @@ class Pilot(Generic[ReturnType]):
         if delay is None:
             await wait_for_idle(0)
         else:
-            await _async.sleep(delay)
+            await _async.get().sleep(delay)
         self.app.screen._on_timer_update()
 
     async def wait_for_animation(self) -> None:

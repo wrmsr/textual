@@ -147,7 +147,7 @@ class MessagePump(metaclass=_MessagePumpMeta):
 
     @cached_property
     def _mounted_event(self) -> _async.Event:
-        return _async.new_event()
+        return _async.get().new_event()
 
     @property
     def _prevent_message_types_stack(self) -> list[set[type[Message]]]:
@@ -469,9 +469,9 @@ class MessagePump(metaclass=_MessagePumpMeta):
         assert (
             self._task is not None
         ), "Node must be running before calling wait_for_refresh"
-        if _async.current_task() is self._task:
+        if _async.get().current_task() is self._task:
             return False
-        refreshed_event = _async.new_event()
+        refreshed_event = _async.get().new_event()
         self.call_after_refresh(refreshed_event.set)
         await refreshed_event.wait()
         return True
@@ -524,7 +524,7 @@ class MessagePump(metaclass=_MessagePumpMeta):
             self._timers.clear()
         Reactive._reset_object(self)
         self._message_queue.put_nowait(None)
-        if wait and self._task is not None and _async.current_task() != self._task:
+        if wait and self._task is not None and _async.get().current_task() != self._task:
             try:
                 running_widget = active_message_pump.get()
             except LookupError:
@@ -541,7 +541,7 @@ class MessagePump(metaclass=_MessagePumpMeta):
         self._thread_init()
 
         if self.app._running:
-            self._task = _async.create_task(
+            self._task = _async.get().create_task(
                 self._process_messages(), name=f"message pump {self}"
             )
         else:
@@ -624,7 +624,7 @@ class MessagePump(metaclass=_MessagePumpMeta):
         """Process messages until the queue is closed."""
         _rich_traceback_guard = True
         self._thread_id = threading.get_ident()
-        await _async.sleep(0)
+        await _async.get().sleep(0)
         while not self._closed:
             try:
                 message = await self._get_message()

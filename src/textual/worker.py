@@ -295,7 +295,7 @@ class Worker(Generic[ResultType]):
                 active_worker.set(self)
                 return await work
 
-            return _async.run(do_work())
+            return _async.get().run(do_work())
 
         def run_coroutine(
             work: Callable[[], Coroutine[None, None, ResultType]],
@@ -321,7 +321,7 @@ class Worker(Generic[ResultType]):
         else:
             raise WorkerError("Unsupported attempt to run a thread worker")
 
-        loop = _async.get_running_loop()
+        loop = _async.get().get_running_loop()
         assert loop is not None
         return await loop.run_in_executor(None, runner, self._work)
 
@@ -398,7 +398,7 @@ class Worker(Generic[ResultType]):
         if self._task is not None:
             return
         self.state = WorkerState.RUNNING
-        self._task = _async.create_task(self._run(app))
+        self._task = _async.get().create_task(self._run(app))
 
         def task_done_callback(_task: _async.Task) -> None:
             """Run the callback.

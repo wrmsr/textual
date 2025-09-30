@@ -220,14 +220,14 @@ class LinuxDriver(Driver):
                 signal.signal(signal.SIGTTOU, signal.SIG_DFL)
                 signal.signal(signal.SIGTTIN, signal.SIG_DFL)
 
-        loop = _async.get_running_loop()
+        loop = _async.get().get_running_loop()
 
         def send_size_event() -> None:
             terminal_size = self._get_terminal_size()
             width, height = terminal_size
             textual_size = Size(width, height)
             event = events.Resize(textual_size, textual_size)
-            _async.run_coroutine_threadsafe(
+            _async.get().run_coroutine_threadsafe(
                 self._app._post_message(event),
                 loop=loop,
             )
@@ -290,7 +290,7 @@ class LinuxDriver(Driver):
         # SIGTSTP...
         if self._must_signal_resume:
             self._must_signal_resume = False
-            _async.run_coroutine_threadsafe(
+            _async.get().run_coroutine_threadsafe(
                 self._app._post_message(self.SignalResume()),
                 loop=loop,
             )

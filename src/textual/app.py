@@ -861,7 +861,7 @@ class App(Generic[ReturnType], DOMNode):
     @cached_property
     def _exception_event(self) -> _async.Event:
         """An event that will be set when the first exception is encountered."""
-        return _async.new_event()
+        return _async.get().new_event()
 
     def __init_subclass__(cls, *args, **kwargs) -> None:
         for variable_name, screen_collection in (
@@ -1728,7 +1728,7 @@ class App(Generic[ReturnType], DOMNode):
                 return await invoke(callback_with_args)
 
         # Post the message to the main loop
-        future: Future[CallThreadReturnType] = _async.run_coroutine_threadsafe(
+        future: Future[CallThreadReturnType] = _async.get().run_coroutine_threadsafe(
             run_callback(), loop=self._loop
         )
         result = future.result()
@@ -1947,7 +1947,7 @@ class App(Generic[ReturnType], DOMNode):
         for key in keys:
             if key.startswith("wait:"):
                 _, wait_ms = key.split(":")
-                await _async.sleep(float(wait_ms) / 1000)
+                await _async.get().sleep(float(wait_ms) / 1000)
                 await app._animator.wait_until_complete()
             else:
                 if len(key) == 1 and not key.isalnum():
@@ -2066,7 +2066,7 @@ class App(Generic[ReturnType], DOMNode):
         app = self
         app._disable_tooltips = not tooltips
         app._disable_notifications = not notifications
-        app_ready_event = _async.new_event()
+        app_ready_event = _async.get().new_event()
 
         def on_app_ready() -> None:
             """Called when app is ready to process events."""
@@ -2083,7 +2083,7 @@ class App(Generic[ReturnType], DOMNode):
                 try:
                     if message_hook is not None:
                         message_hook_context_var.set(message_hook)
-                    app._loop = _async.get_running_loop()
+                    app._loop = _async.get().get_running_loop()
                     app._thread_id = threading.get_ident()
                     await app._process_messages(
                         ready_callback=on_app_ready,
@@ -2095,7 +2095,7 @@ class App(Generic[ReturnType], DOMNode):
 
         # Launch the app in the "background"
 
-        self._task = app_task = _async.create_task(run_app(app), name=f"run_test {app}")
+        self._task = app_task = _async.get().create_task(run_app(app), name=f"run_test {app}")
 
         # Wait until the app has performed all startup routines.
         await app_ready_event.wait()
@@ -2106,7 +2106,7 @@ class App(Generic[ReturnType], DOMNode):
                 await pilot._wait_for_screen()
                 yield pilot
             finally:
-                await _async.sleep(0)
+                await _async.get().sleep(0)
                 # Shutdown the app cleanly
                 await app._shutdown()
                 await app_task
@@ -2169,14 +2169,14 @@ class App(Generic[ReturnType], DOMNode):
                             raise
 
                 pilot = Pilot(app)
-                auto_pilot_task = _async.create_task(
+                auto_pilot_task = _async.get().create_task(
                     run_auto_pilot(auto_pilot, pilot), name=repr(pilot)
                 )
 
         self._thread_init()
 
-        loop = app._loop = _async.get_running_loop()
-        _async.set_loop_eager_task_factory(loop)
+        loop = app._loop = _async.get().get_running_loop()
+        _async.get().set_loop_eager_task_factory(loop)
         with app._context():
             try:
                 await app._process_messages(
@@ -2193,7 +2193,7 @@ class App(Generic[ReturnType], DOMNode):
                         await auto_pilot_task
                 finally:
                     try:
-                        await _async.shield(app._shutdown())
+                        await _async.get().shield(app._shutdown())
                     except _async.CancelledError:
                         pass
                 app._loop = None
@@ -2239,7 +2239,7 @@ class App(Generic[ReturnType], DOMNode):
             )
 
         if loop is None:
-            return _async.run_main(run_app)
+            return _async.get().run_main(run_app)
         return loop.run_until_complete(run_app())
 
     async def _on_css_change(self) -> None:
@@ -2779,10 +2779,10 @@ class App(Generic[ReturnType], DOMNode):
             )
 
         try:
-            loop = _async.get_running_loop()
+            loop = _async.get().get_running_loop()
         except RuntimeError:
             # Mainly for testing, when push_screen isn't called in an async context
-            future: _async.Future[ScreenResultType] = _async.new_future()
+            future: _async.Future[ScreenResultType] = _async.get().new_future()
         else:
             future = loop.create_future()
 
@@ -2838,7 +2838,7 @@ class App(Generic[ReturnType], DOMNode):
         """
         await self._flush_next_callbacks()
         # The shield prevents the cancellation of the current task from canceling the push_screen awaitable
-        return await _async.shield(self.push_screen(screen, wait_for_dismiss=True))
+        return await _async.get().shield(self.push_screen(screen, wait_for_dismiss=True))
 
     def switch_screen(self, screen: Screen | str) -> AwaitComplete:
         """Switch to another [screen](/guide/screens) by replacing the top of the screen stack with a new screen.
@@ -3212,7 +3212,7 @@ class App(Generic[ReturnType], DOMNode):
             """
             await self._init_devtools()
             self.log.system("---")
-            self.log.system(loop=_async.get_running_loop())
+            self.log.system(loop=_async.get().get_running_loop())
             self.log.system(features=self.features)
             if constants.LOG_FILE is not None:
                 _log_path = os.path.abspath(constants.LOG_FILE)

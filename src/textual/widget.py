@@ -150,11 +150,11 @@ class AwaitMount:
         async def await_mount() -> None:
             if self._widgets:
                 aws = [
-                    _async.create_task(widget._mounted_event.wait(), name="await mount")
+                    _async.get().create_task(widget._mounted_event.wait(), name="await mount")
                     for widget in self._widgets
                 ]
                 if aws:
-                    await _async.wait(aws)
+                    await _async.get().wait(aws)
                     self._parent.refresh(layout=True)
                     try:
                         self._parent.app._update_mouse_over(self._parent.screen)
@@ -4373,7 +4373,7 @@ class Widget(DOMNode):
             node.post_message(Prune())
 
         # Wait for child nodes to exit
-        await _async.gather(*[node._task for node in children if node._task is not None])
+        await _async.get().gather(*[node._task for node in children if node._task is not None])
         # Send unmount event
         await self._dispatch_message(events.Unmount())
         assert isinstance(parent, DOMNode)
